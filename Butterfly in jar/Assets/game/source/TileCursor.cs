@@ -34,7 +34,7 @@ public class TileCursor : MonoBehaviour
         // Добавление компонента SpriteRenderer
         ghostSpriteRenderer = ghostTile.AddComponent<SpriteRenderer>();
         ghostSpriteRenderer.color = new Color(1, 1, 1, 0.8f); // Установлено на 0.3 для большей прозрачности
-        ghostSpriteRenderer.sortingOrder = 11; // Убедитесь, что он отображается поверх других объектов
+        ghostSpriteRenderer.sortingOrder = 12; // Убедитесь, что он отображается поверх других объектов
     }
 
     void Update()
@@ -134,8 +134,11 @@ public class TileCursor : MonoBehaviour
                 fireTilemap.SetTile(position, tiles[currentTileIndex]);
                 main.audioSource.PlayOneShot(Resources.Load<AudioClip>("Audio/firePlace"));
 
-                FireInstance newFire = new FireInstance(position, fireTilemap, 3);
-                main.activeFires.Add(newFire);
+                if (!blockTilemap.GetTile(position))
+                {
+                    FireInstance newFire = new FireInstance(position, fireTilemap, 3);
+                    main.activeFires.Add(newFire);
+                }
 
                 OnTilePlaced?.Invoke();
                 Destroy(tileObject); // Удаляем временный объект

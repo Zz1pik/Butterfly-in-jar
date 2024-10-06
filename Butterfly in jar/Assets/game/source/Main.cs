@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using TMPEffects.Components;
 using UnityEngine;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine.Tilemaps;
 
 [System.Serializable]
@@ -43,13 +44,17 @@ public class Main : MonoBehaviour
     public bool hasGuide = false;
     
     private Level[] levels;
-    private int currentLevelIndex = 0;
+
+    public int currentLevelIndex = 0;
+    public int maxLevels;
     
     public AudioSource audioSource;
     public AudioSource audioSourceMusic;
-    private AudioClip acidBurnSound;
-    
+    public AudioSource audioSourceBurn;
+
     public List<FireInstance> activeFires = new List<FireInstance>();
+
+    private bool burnSound = false;
 
     public void Update()
     {
@@ -61,6 +66,8 @@ public class Main : MonoBehaviour
 
     void Start()
     {
+        currentLevelIndex = 0;
+        
         tileCursor.OnTilePlaced += HandleTilePlaced;
         
         guideText.gameObject.SetActive(false);
@@ -142,7 +149,40 @@ public class Main : MonoBehaviour
                 "+tjt+"
             }, 8, new Tile[] {worldGrid.fireTile as Tile}),
             
+            new Level(new string[]
+            {
+                "ttttt",
+                "+bppj",
+                "ttttt"
+            }, 3, new Tile[] {worldGrid.treeTile as Tile}),
+            
+            new Level(new string[]
+            {
+                "++t++",
+                "ppbpp",
+                "p+p+p",
+                "ptjtp"
+            }, 10, new Tile[] {worldGrid.treeTile as Tile}),
+            
+            new Level(new string[]
+            {
+                "bpt++",
+                "pt++t",
+                "t++tj",
+            }, 10, new Tile[] { worldGrid.fireTile as Tile, worldGrid.treeTile as Tile }),
+            
+            new Level(new string[]
+            {
+                "bpt+tt",
+                "tptppp",
+                "tptptt",
+                "+ptppp",
+                "pptpt+",
+                "tppptj",
+            }, 22, new Tile[] { worldGrid.treeTile as Tile, worldGrid.plantTile as Tile }),
         };
+
+        maxLevels = levels.Length;
 
         worldGrid.GenerateWorld(levels[currentLevelIndex].map);
         stepsLeft = levels[currentLevelIndex].steps;
@@ -163,8 +203,7 @@ public class Main : MonoBehaviour
         tileCursor.tiles = null;
         tileCursor.tiles = levels[currentLevelIndex].tiles;
         tileCursor.UpdateCurrentTileImage();
-
-        AddNewFiresToList();
+        
         CheckBurningBlock();
         CheckFireStates();
         
@@ -172,19 +211,19 @@ public class Main : MonoBehaviour
         {
             hasGuide = true;
             guideText.gameObject.SetActive(true);
-            StartCoroutine(LevelGuide1()); 
+            StartCoroutine(LevelGuide0()); 
         } 
         else if (currentLevelIndex == 1 && !hasGuide)
         {
             hasGuide = true;
             guideText.gameObject.SetActive(true);
-            StartCoroutine(LevelGuide2());
+            StartCoroutine(LevelGuide1());
         }
         else if (currentLevelIndex == 2 && !hasGuide)
         {
             hasGuide = true;
             guideText.gameObject.SetActive(true);
-            StartCoroutine(LevelGuide3()); 
+            StartCoroutine(LevelGuide2()); 
         }
         else if (currentLevelIndex == 3 && !hasGuide)
         {
@@ -225,26 +264,41 @@ public class Main : MonoBehaviour
         }
         else if (currentLevelIndex == 10 && !hasGuide)
         {
+            hasGuide = true;
+            guideText.gameObject.SetActive(true);
+            StartCoroutine(LevelGuide10()); 
+        }
+        else if (currentLevelIndex == 11 && !hasGuide)
+        {
+            canPlace = true;
+            guideText.gameObject.SetActive(false);
+        }
+        else if (currentLevelIndex == 12 && !hasGuide)
+        {
+            canPlace = true;
+            guideText.gameObject.SetActive(false);
+        }
+        else if (currentLevelIndex == 13 && !hasGuide)
+        {
             canPlace = true;
             guideText.gameObject.SetActive(false);
         }
     }
 
-    private IEnumerator LevelGuide1()
+    private IEnumerator LevelGuide0()
     {
-        canPlace = false;
         ShowGuideText("<wave amp=1>This butterfly is beautiful, isn't it?");
-        yield return new WaitForSeconds(4f);
+        yield return new WaitForSeconds(4.2f);
         ShowGuideText("<wave amp=1>Click the <jump>LMB</jump> to the left of it to put the current tile.");
         yield return new WaitForSeconds(2.5f);
         canPlace = true;
     }
     
-    private IEnumerator LevelGuide2()
+    private IEnumerator LevelGuide1()
     {
         canPlace = false;
         ShowGuideText("<wave amp=1>So, it looks like she needs to be caught again...");
-        yield return new WaitForSeconds(4f); 
+        yield return new WaitForSeconds(4.5f); 
         canPlace = true;
         yield return new WaitUntil(() => butterFlyStep);
         canPlace = false;
@@ -253,11 +307,11 @@ public class Main : MonoBehaviour
         canPlace = true;
     }
     
-    private IEnumerator LevelGuide3()
+    private IEnumerator LevelGuide2()
     {
         canPlace = false;
         ShowGuideText("<wave amp=1>It looks like we're at an impasse!");
-        yield return new WaitForSeconds(3f); 
+        yield return new WaitForSeconds(3.2f); 
         ShowGuideText("<wave amp=1>It's good that I've saved an extra tile especially for such cases! Click the <jump>RMB</jump> to change the tile and place he!</wave>");
         yield return new WaitForSeconds(7f); 
         canPlace = true;
@@ -272,7 +326,7 @@ public class Main : MonoBehaviour
     {
         canPlace = false;
         ShowGuideText("<wave amp=1>It looks like the tree has blocked our way...");
-        yield return new WaitForSeconds(3.5f); 
+        yield return new WaitForSeconds(4f); 
         ShowGuideText("<wave amp=1>But it's good that we have a fire that burns plants and trees :)</wave>");
         yield return new WaitForSeconds(4f);
         canPlace = true;
@@ -284,12 +338,27 @@ public class Main : MonoBehaviour
     private IEnumerator LevelGuide7()
     {
         fireBackground.SetActive(true);
+        burnSound = true;
+
+        audioSourceMusic.pitch = -0.1f;
         
-        canPlace = false;
+        audioSourceBurn.clip = Resources.Load<AudioClip>("Audio/backgroundBurn");
+        audioSourceBurn.loop = true;
+        audioSourceBurn.Play();
         ShowGuideText("<shake><color=red>BURN EVERYTHING HERE!");
-        yield return new WaitForSeconds(2f);
         canPlace = true;
+        yield return new Null();
     }
+
+    private IEnumerator LevelGuide10()
+    {
+        canPlace = true;
+        ShowGuideText("<wave amp=1>What happened? Why did it turn yellow???");
+        yield return new WaitForSeconds(3.2f);
+        ShowGuideText("<wave amp=1>It's probably some other kind. Okay, just put it in a jar and that's it.");
+        yield return new WaitForSeconds(3f);
+    }
+    
     
     public void ShowGuideText(string messageText)
     {
@@ -309,7 +378,7 @@ public class Main : MonoBehaviour
         }
     }
     
-    private void AddNewFiresToList()
+    public void AddNewFiresToList()
     {
         // Проходим по всем тайлам на fireTilemap
         BoundsInt bounds = fireTilemap.cellBounds;
@@ -371,14 +440,20 @@ public class Main : MonoBehaviour
 
     public void NextLevel()
     {
-        currentLevelIndex++;
         if (currentLevelIndex < levels.Length)
         {
+            if (burnSound)
+            {
+                audioSourceMusic.pitch = 1;
+                audioSourceBurn.Stop();
+            }
+
+            hasGuide = false;
+
+            guideText.gameObject.SetActive(false);
             winScreen.gameObject.SetActive(false);
             stepsLeftText.gameObject.SetActive(true);
 
-            audioSourceMusic.Play();
-            
             wictory = false;
             
             fireBackground.SetActive(false);
@@ -413,7 +488,8 @@ public class Main : MonoBehaviour
         hasGuide = false;
         wictory = true;
         
-        audioSourceMusic.Pause();
+        audioSourceMusic.clip = Resources.Load<AudioClip>("Audio/win");
+        audioSourceMusic.Play();
         
         guideText.gameObject.SetActive(false);
         stepsLeftText.gameObject.SetActive(false);
@@ -441,7 +517,6 @@ public class Main : MonoBehaviour
         if (stepsLeft > 0)
         {
             BoundsInt bounds = worldGrid.blockTilemap.cellBounds;
-            TileBase[] allTiles = worldGrid.blockTilemap.GetTilesBlock(bounds);
 
             for (int x = bounds.xMin; x < bounds.xMax; x++)
             {
@@ -458,7 +533,7 @@ public class Main : MonoBehaviour
                         audioSource.PlayOneShot(Resources.Load<AudioClip>("Audio/acidBurn"));
 
                         ParticleSystem particle;
-
+                        
                         // Используем Resources.Load для загрузки префаба
                         Vector3 worldPosition = worldGrid.blockTilemap.CellToWorld(tilePosition);
                         particle = Instantiate(Resources.Load<ParticleSystem>("Particle/acidBurnEffect"), worldPosition + new Vector3(0.5f, 0.5f, 0f), Quaternion.identity);

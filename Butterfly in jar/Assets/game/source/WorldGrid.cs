@@ -12,8 +12,7 @@ public class WorldGrid : MonoBehaviour
     public Tilemap fireTilemap;
 
     // Префаб бабочки
-    public GameObject butterflyPrefab;
-    public GameObject butterflyFirePrefab;
+    public GameObject butterflyPrefab; // Префаб бабочки
 
     // Dictionary to store tile references
     public TileBase groundTile;     // Tile for ground ('+')
@@ -67,10 +66,14 @@ public class WorldGrid : MonoBehaviour
                         blockTilemap.SetTile(position, plantTile);
                         break;
                     case 'b':
-                        SpawnButterfly(position, butterflyPrefab); // Теперь 'b' спавнится на (0, 0)
-                        break;
-                    case 'i':
-                        SpawnButterfly(position, butterflyFirePrefab); // Теперь 'b' спавнится на (0, 0)
+                        if (main.currentLevelIndex == 10 || main.currentLevelIndex == 11 || main.currentLevelIndex == 12 || main.currentLevelIndex == 13)
+                        {
+                            Butterfly.CreateButterfly(butterflyPrefab, position, true, blockTilemap, fireTilemap, groundTilemap);
+                        }
+                        else
+                        {
+                            Butterfly.CreateButterfly(butterflyPrefab, position, false, blockTilemap, fireTilemap, groundTilemap);
+                        }
                         break;
                     case 'j':
                         blockTilemap.SetTile(position, jarTile);
@@ -81,21 +84,10 @@ public class WorldGrid : MonoBehaviour
                 }
             }
         }
+        
+        main.AddNewFiresToList();
     
         main.butterfly = FindObjectOfType<Butterfly>();
-    }
-    
-    private void SpawnButterfly(Vector3Int gridPosition, GameObject Prefab)
-    {
-        Vector3 worldPosition = blockTilemap.GetCellCenterWorld(gridPosition);
-        GameObject butterfly = Instantiate(Prefab, worldPosition, Quaternion.identity);
-        Butterfly butterflyScript = butterfly.GetComponent<Butterfly>();
-        if (butterflyScript != null)
-        {
-            butterflyScript.blockTilemap = blockTilemap;
-            butterflyScript.fireTilemap = fireTilemap;
-            butterflyScript.groundTilemap = groundTilemap;
-        }
     }
 
     public void ClearWorld()

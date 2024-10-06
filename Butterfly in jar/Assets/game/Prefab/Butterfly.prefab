@@ -148,6 +148,9 @@ MonoBehaviour:
   fireTilemap: {fileID: 0}
   groundTilemap: {fileID: 0}
   shadow: {fileID: 5196676162012419369}
+  isButterfluFire: 0
+  normalButterflySprite: {fileID: 21300000, guid: 2c63b2618bd0f064cb20c14880d8ef14, type: 3}
+  fireButterflySprite: {fileID: 21300000, guid: 8e0b3c173eddc014b824fd5f6c9d0618, type: 3}
 --- !u!1 &7402789003799229318
 GameObject:
   m_ObjectHideFlags: 0
