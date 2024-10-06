@@ -15,6 +15,7 @@ public class TileCursor : MonoBehaviour
     private int currentTileIndex = 0;
 
     public Image currentTileImage;
+    public Image nextTileImage; // Новое изображение для следующего тайла
 
     private GameObject ghostTile; // Призрачный тайл
     private SpriteRenderer ghostSpriteRenderer; // Рендерер призрачного тайла
@@ -27,8 +28,6 @@ public class TileCursor : MonoBehaviour
 
     public void Start()
     {
-        Cursor.visible = true;
-
         // Создание нового объекта и добавление его в сцену
         ghostTile = new GameObject("GhostTile");
 
@@ -78,22 +77,6 @@ public class TileCursor : MonoBehaviour
         TileBase existingFireTile = fireTilemap.GetTile(position);
         TileBase existingGroundTile = groundTilemap.GetTile(position);
 
-        // Разрешаем ставить FireTile на TreeTile
-        if (existingBlockTile != null)
-        {
-            if (existingBlockTile.name == "TreeTile" && tiles[currentTileIndex].name == "FireTile")
-            {
-                return true; // Разрешаем ставить FireTile на TreeTile
-            }
-            return false; // Запрещаем ставить на любые другие блокирующие тайлы
-        }
-        
-        if (existingFireTile != null)
-            return false;
-        
-        if (existingGroundTile == null)
-            return false;
-
         Vector3 worldPosition = blockTilemap.GetCellCenterWorld(position);
         Collider2D hitCollider = Physics2D.OverlapPoint(worldPosition);
 
@@ -105,6 +88,21 @@ public class TileCursor : MonoBehaviour
                 return false; // Запрещаем ставить на бабочку
             }
         }
+        
+        if (existingBlockTile != null)
+        {
+            if ((existingBlockTile.name == "TreeTile" && tiles[currentTileIndex].name == "FireTile" || existingBlockTile.name == "PlantTile" && tiles[currentTileIndex].name == "FireTile") && existingFireTile == null)
+            {
+                return true; 
+            }
+            return false;
+        }
+        
+        if (existingFireTile != null)
+            return false;
+        
+        if (existingGroundTile == null)
+            return false;
 
         return true; // Если ни блокирующего тайла, ни бабочки нет, возвращаем true
     }
@@ -160,9 +158,9 @@ public class TileCursor : MonoBehaviour
                 blockTilemap.SetTile(position, tiles[currentTileIndex]);
 
                 // Воспроизводим звук в зависимости от типа тайла
-                if (currentTileName == "TreeTile" || currentTileName == "StoneTile")
+                if (currentTileName == "TreeTile" || currentTileName == "PlantTile")
                 {
-                    string audioName = currentTileName == "TreeTile" ? "Audio/treePlace" : "Audio/stonePlace";
+                    string audioName = currentTileName == "TreeTile" ? "Audio/treePlace" : "Audio/plantPlace";
                     main.audioSource.PlayOneShot(Resources.Load<AudioClip>(audioName));
                 }
 
@@ -174,8 +172,11 @@ public class TileCursor : MonoBehaviour
 
     public void SwitchTile()
     {
-        currentTileIndex = (currentTileIndex + 1) % tiles.Length;
-        UpdateCurrentTileImage();
+        if (tiles.Length == 0)
+            return; // Если нет тайлов, просто выходим из метода
+
+        currentTileIndex = (currentTileIndex + 1) % tiles.Length; // Переход к следующему тайлу
+        UpdateCurrentTileImage(); // Обновляем текущее изображение
         ghostSpriteRenderer.sprite = tiles[currentTileIndex].sprite; // Обновляем спрайт призрачного тайла
 
         if (main.hasGuide)
@@ -185,6 +186,20 @@ public class TileCursor : MonoBehaviour
     public void UpdateCurrentTileImage()
     {
         currentTileImage.sprite = tiles[currentTileIndex].sprite;
-        ghostSpriteRenderer.sprite = tiles[currentTileIndex].sprite; // Обновляем спрайт призрачного тайла
+
+        // Проверяем количество тайлов для обновления следующего тайла
+        if (tiles.Length > 1) // Если тайлов больше 1
+        {
+            int nextTileIndex = (currentTileIndex + 1) % tiles.Length; // Индекс следующего тайла
+            nextTileImage.sprite = tiles[nextTileIndex].sprite; // Обновляем изображение следующего тайла
+            nextTileImage.gameObject.SetActive(true); // Делаем активным объект следующего тайла
+        }
+        else
+        {
+            nextTileImage.gameObject.SetActive(false); // Делаем неактивным объект следующего тайла, если тайлов только 1
+        }
+
+        ghostSpriteRenderer.sprite = tiles[currentTileIndex].sprite; 
     }
+
 }

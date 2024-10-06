@@ -12,13 +12,14 @@ public class WorldGrid : MonoBehaviour
     public Tilemap fireTilemap;
 
     // Префаб бабочки
-    public GameObject butterflyPrefab; // Префаб бабочки
+    public GameObject butterflyPrefab;
+    public GameObject butterflyFirePrefab;
 
     // Dictionary to store tile references
     public TileBase groundTile;     // Tile for ground ('+')
     public TileBase fireTile;       // Tile for fire ('f')
     public TileBase treeTile;       // Tile for tree ('t')
-    public TileBase stoneTile;      // Tile for stone ('s')
+    public TileBase plantTile;      // Tile for stone ('p')
     public TileBase jarTile;        // Tile for plant ('p')
     
     private int gridWidth;
@@ -62,11 +63,14 @@ public class WorldGrid : MonoBehaviour
                     case 't':
                         blockTilemap.SetTile(position, treeTile);
                         break;
-                    case 's':
-                        blockTilemap.SetTile(position, stoneTile);
+                    case 'p':
+                        blockTilemap.SetTile(position, plantTile);
                         break;
                     case 'b':
-                        SpawnButterfly(position); // Теперь 'b' спавнится на (0, 0)
+                        SpawnButterfly(position, butterflyPrefab); // Теперь 'b' спавнится на (0, 0)
+                        break;
+                    case 'i':
+                        SpawnButterfly(position, butterflyFirePrefab); // Теперь 'b' спавнится на (0, 0)
                         break;
                     case 'j':
                         blockTilemap.SetTile(position, jarTile);
@@ -80,12 +84,11 @@ public class WorldGrid : MonoBehaviour
     
         main.butterfly = FindObjectOfType<Butterfly>();
     }
-
     
-    private void SpawnButterfly(Vector3Int gridPosition)
+    private void SpawnButterfly(Vector3Int gridPosition, GameObject Prefab)
     {
         Vector3 worldPosition = blockTilemap.GetCellCenterWorld(gridPosition);
-        GameObject butterfly = Instantiate(butterflyPrefab, worldPosition, Quaternion.identity);
+        GameObject butterfly = Instantiate(Prefab, worldPosition, Quaternion.identity);
         Butterfly butterflyScript = butterfly.GetComponent<Butterfly>();
         if (butterflyScript != null)
         {
@@ -94,8 +97,7 @@ public class WorldGrid : MonoBehaviour
             butterflyScript.groundTilemap = groundTilemap;
         }
     }
-    
-    
+
     public void ClearWorld()
     {
         groundTilemap.ClearAllTiles();

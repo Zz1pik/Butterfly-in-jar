@@ -21,7 +21,6 @@ public class Level
     }
 }
 
-
 public class Main : MonoBehaviour
 {
     public WorldGrid worldGrid;
@@ -35,7 +34,7 @@ public class Main : MonoBehaviour
     public TextMeshProUGUI stepsLeftText;
     public TextMeshProUGUI guideText;
 
-    public TMPWriter guideTextWriter;
+    public GameObject fireBackground;
     
     public int stepsLeft;
     public bool butterFlyStep;
@@ -44,9 +43,10 @@ public class Main : MonoBehaviour
     public bool hasGuide = false;
     
     private Level[] levels;
-    private int currentLevelIndex = 2;
+    private int currentLevelIndex = 0;
     
     public AudioSource audioSource;
+    public AudioSource audioSourceMusic;
     private AudioClip acidBurnSound;
     
     public List<FireInstance> activeFires = new List<FireInstance>();
@@ -61,13 +61,13 @@ public class Main : MonoBehaviour
 
     void Start()
     {
-        // Получите компонент AudioSource
-        audioSource = gameObject.AddComponent<AudioSource>();
-        guideTextWriter = guideText.GetComponent<TMPWriter>();
-
         tileCursor.OnTilePlaced += HandleTilePlaced;
         
         guideText.gameObject.SetActive(false);
+        
+        audioSourceMusic.clip = Resources.Load<AudioClip>("Audio/backgroundMusic"); 
+        audioSourceMusic.loop = true;
+        audioSourceMusic.Play(); 
 
         // Инициализация уровней
         levels = new Level[]
@@ -79,45 +79,95 @@ public class Main : MonoBehaviour
 
             new Level(new string[]
             {
-                "+bsjt"
+                "+bpjt"
             }, 2, new Tile[] {worldGrid.treeTile as Tile}),
             
             new Level(new string[]
             {
-            "ttttt",
-            "tb+jt",
-            "ttttt"
-            }, 2, new Tile[] {worldGrid.treeTile as Tile, worldGrid.stoneTile as Tile}),
+                "ttttt",
+                "tb+jt",
+                "ttttt"
+            }, 2, new Tile[] {worldGrid.treeTile as Tile, worldGrid.plantTile as Tile}),
             
             new Level(new string[]
             {
+                "++++p",
+                "b++pj",
+                "++++p"
+            }, 10, new Tile[] {worldGrid.treeTile as Tile}),
+            
+            new Level(new string[]
+            {
+                "++j",
+                "p++",
+                "bp+"
+            }, 4, new Tile[] {worldGrid.treeTile as Tile, worldGrid.plantTile as Tile}),
+            
+            new Level(new string[]
+            {
+                "b++++",
+                "tttt+",
                 "+++++",
-                "+++++",
-                "+b+j+",
-                "+++++",
-                "+++++"
-            }, 10, new Tile[] {worldGrid.stoneTile as Tile, worldGrid.treeTile as Tile, worldGrid.fireTile as Tile}) 
+                "+tttt",
+                "++++j"
+            }, 16, new Tile[] {worldGrid.treeTile as Tile, worldGrid.plantTile as Tile}),
+
+            new Level(new string[]
+            {
+                "ttttt",
+                "b+tjt",
+                "ttttt"
+            }, 3, new Tile[] {worldGrid.fireTile as Tile}),
+
+            new Level(new string[]
+            {
+                "ppppp",
+                "bpppj",
+                "ppppp"
+            }, 8, new Tile[] {worldGrid.fireTile as Tile}),
+            
+            new Level(new string[]
+            {
+                "+bt+t",
+                "++t+t",
+                "++ttj"
+            }, 7, new Tile[] {worldGrid.fireTile as Tile}),
+            
+            new Level(new string[]
+            {
+                "+ttt+",
+                "tpppt",
+                "tpbpt",
+                "tpppt",
+                "+tjt+"
+            }, 8, new Tile[] {worldGrid.fireTile as Tile}),
+            
         };
 
         worldGrid.GenerateWorld(levels[currentLevelIndex].map);
         stepsLeft = levels[currentLevelIndex].steps;
 
+        fireBackground.SetActive(false);
+
         StartTurn();
+        
+        tileCursor.UpdateCurrentTileImage(); 
         UiStart();
     }
 
     public void StartTurn()
     {
         butterFlyStep = false;
+        canPlace = true;
 
         tileCursor.tiles = null;
         tileCursor.tiles = levels[currentLevelIndex].tiles;
         tileCursor.UpdateCurrentTileImage();
 
         AddNewFiresToList();
-        CheckAndClearFireOnTrees();
+        CheckBurningBlock();
         CheckFireStates();
-
+        
         if (currentLevelIndex == 0 && !hasGuide)
         {
             hasGuide = true;
@@ -136,6 +186,48 @@ public class Main : MonoBehaviour
             guideText.gameObject.SetActive(true);
             StartCoroutine(LevelGuide3()); 
         }
+        else if (currentLevelIndex == 3 && !hasGuide)
+        {
+            canPlace = true;
+            guideText.gameObject.SetActive(false);
+        }
+        else if (currentLevelIndex == 4 && !hasGuide)
+        {
+            canPlace = true;
+            guideText.gameObject.SetActive(false);
+        }
+        else if (currentLevelIndex == 5 && !hasGuide)
+        {
+            canPlace = true;
+            guideText.gameObject.SetActive(false);
+        }
+        else if (currentLevelIndex == 6 && !hasGuide)
+        {
+            hasGuide = true;
+            guideText.gameObject.SetActive(true);
+            StartCoroutine(LevelGuide6()); 
+        }
+        else if (currentLevelIndex == 7 && !hasGuide)
+        {
+            hasGuide = true;
+            guideText.gameObject.SetActive(true);
+            StartCoroutine(LevelGuide7()); 
+        }
+        else if (currentLevelIndex == 8 && !hasGuide)
+        {
+            canPlace = true;
+            guideText.gameObject.SetActive(false);
+        }
+        else if (currentLevelIndex == 9 && !hasGuide)
+        {
+            canPlace = true;
+            guideText.gameObject.SetActive(false);
+        }
+        else if (currentLevelIndex == 10 && !hasGuide)
+        {
+            canPlace = true;
+            guideText.gameObject.SetActive(false);
+        }
     }
 
     private IEnumerator LevelGuide1()
@@ -143,7 +235,7 @@ public class Main : MonoBehaviour
         canPlace = false;
         ShowGuideText("<wave amp=1>This butterfly is beautiful, isn't it?");
         yield return new WaitForSeconds(4f);
-        ShowGuideText("<wave amp=1>Put a tree to her left so that she gets into the jar.");
+        ShowGuideText("<wave amp=1>Click the <jump>LMB</jump> to the left of it to put the current tile.");
         yield return new WaitForSeconds(2.5f);
         canPlace = true;
     }
@@ -156,7 +248,7 @@ public class Main : MonoBehaviour
         canPlace = true;
         yield return new WaitUntil(() => butterFlyStep);
         canPlace = false;
-        ShowGuideText("<wave amp=1>As you can see, she can fly over rocks. Remember, I think this information will be useful to you further.");
+        ShowGuideText("<wave amp=1>As you can see, she can fly over flowers. Remember, I think this information will be useful to you further.");
         yield return new WaitForSeconds(6f);
         canPlace = true;
     }
@@ -166,7 +258,7 @@ public class Main : MonoBehaviour
         canPlace = false;
         ShowGuideText("<wave amp=1>It looks like we're at an impasse!");
         yield return new WaitForSeconds(3f); 
-        ShowGuideText("<wave amp=1>It's good that I've saved an extra tile especially for such cases! Click the <jump>LMB</jump> to change the tile and place he!</wave>");
+        ShowGuideText("<wave amp=1>It's good that I've saved an extra tile especially for such cases! Click the <jump>RMB</jump> to change the tile and place he!</wave>");
         yield return new WaitForSeconds(7f); 
         canPlace = true;
         yield return new WaitUntil(() => butterFlyStep);
@@ -175,7 +267,30 @@ public class Main : MonoBehaviour
         yield return new WaitForSeconds(3.5f);
         canPlace = true;
     }
-
+    
+    private IEnumerator LevelGuide6()
+    {
+        canPlace = false;
+        ShowGuideText("<wave amp=1>It looks like the tree has blocked our way...");
+        yield return new WaitForSeconds(3.5f); 
+        ShowGuideText("<wave amp=1>But it's good that we have a fire that burns plants and trees :)</wave>");
+        yield return new WaitForSeconds(4f);
+        canPlace = true;
+        yield return new WaitUntil(() => butterFlyStep);
+        ShowGuideText("<wave amp=1>It's so good that all living beings are afraid of fire and try to escape from it.");
+        canPlace = true;
+    }
+    
+    private IEnumerator LevelGuide7()
+    {
+        fireBackground.SetActive(true);
+        
+        canPlace = false;
+        ShowGuideText("<shake><color=red>BURN EVERYTHING HERE!");
+        yield return new WaitForSeconds(2f);
+        canPlace = true;
+    }
+    
     public void ShowGuideText(string messageText)
     {
         guideText.text = messageText;
@@ -246,6 +361,7 @@ public class Main : MonoBehaviour
     {
         if (butterfly != null)
         {
+            canPlace = false;
             butterfly.MoveButterfly();
             stepsLeft--;
 
@@ -260,8 +376,12 @@ public class Main : MonoBehaviour
         {
             winScreen.gameObject.SetActive(false);
             stepsLeftText.gameObject.SetActive(true);
+
+            audioSourceMusic.Play();
             
             wictory = false;
+            
+            fireBackground.SetActive(false);
 
             worldGrid.GenerateWorld(levels[currentLevelIndex].map);
             stepsLeft = levels[currentLevelIndex].steps; 
@@ -277,6 +397,8 @@ public class Main : MonoBehaviour
         loseScreen.gameObject.SetActive(false);
         stepsLeftText.gameObject.SetActive(true);
 
+        audioSourceMusic.Play();
+        
         activeFires.Clear();
 
         worldGrid.GenerateWorld(levels[currentLevelIndex].map);
@@ -291,6 +413,8 @@ public class Main : MonoBehaviour
         hasGuide = false;
         wictory = true;
         
+        audioSourceMusic.Pause();
+        
         guideText.gameObject.SetActive(false);
         stepsLeftText.gameObject.SetActive(false);
         winScreen.gameObject.SetActive(true);
@@ -299,6 +423,8 @@ public class Main : MonoBehaviour
     public void Lose()
     {
         hasGuide = false;
+        
+        audioSourceMusic.Pause();
         
         guideText.gameObject.SetActive(false);
         stepsLeftText.gameObject.SetActive(false);
@@ -310,22 +436,27 @@ public class Main : MonoBehaviour
         stepsLeftText.text = "Steps left: " + stepsLeft; // Обновление текста
     }
     
-    public void CheckAndClearFireOnTrees()
+    public void CheckBurningBlock()
     {
         if (stepsLeft > 0)
         {
-            for (int x = 0; x < worldGrid.groundTilemap.size.x; x++)
-            {
-                for (int y = 0; y < worldGrid.groundTilemap.size.y; y++)
-                {
-                    Vector3Int tilePosition = new Vector3Int(x, -y, 0);
+            BoundsInt bounds = worldGrid.blockTilemap.cellBounds;
+            TileBase[] allTiles = worldGrid.blockTilemap.GetTilesBlock(bounds);
 
-                    // Проверяем наличие дерева и огня на одной клетке
-                    if (worldGrid.blockTilemap.GetTile(tilePosition) == worldGrid.treeTile &&
-                        worldGrid.fireTilemap.GetTile(tilePosition) == worldGrid.fireTile)
+            for (int x = bounds.xMin; x < bounds.xMax; x++)
+            {
+                for (int y = bounds.yMin; y < bounds.yMax; y++)
+                {
+                    Vector3Int tilePosition = new Vector3Int(x, y, 0);
+                    
+                    TileBase blockTile = worldGrid.blockTilemap.GetTile(tilePosition);
+                    TileBase fireTile = worldGrid.fireTilemap.GetTile(tilePosition);
+                    
+                    if ((blockTile == worldGrid.treeTile || blockTile == worldGrid.plantTile) && 
+                        fireTile == worldGrid.fireTile)
                     {
                         audioSource.PlayOneShot(Resources.Load<AudioClip>("Audio/acidBurn"));
-                
+
                         ParticleSystem particle;
 
                         // Используем Resources.Load для загрузки префаба
@@ -334,7 +465,7 @@ public class Main : MonoBehaviour
 
                         particle.Play();
 
-                        // Очищаем клетку от дерева и огня
+                        // Очищаем клетку от дерева, растения и огня
                         worldGrid.blockTilemap.SetTile(tilePosition, null);
                         worldGrid.fireTilemap.SetTile(tilePosition, null);
                     }

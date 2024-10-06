@@ -26,6 +26,8 @@ public class Butterfly : MonoBehaviour
         main = FindObjectOfType<Main>();
     }
     
+    private List<Vector3Int> visitedPlantTiles = new List<Vector3Int>(); // Список посещённых тайлов с растениями
+
     public void MoveButterfly()
     {
         Vector3Int[] directions = {
@@ -35,85 +37,157 @@ public class Butterfly : MonoBehaviour
             new Vector3Int(1, 0, 0)    // вправо
         };
 
-        List<Vector3Int> normalMoves = new List<Vector3Int>();
-        List<Vector3Int> jarMoves = new List<Vector3Int>();
-        Vector3Int oppositeDirection = Vector3Int.zero; // Переменная для хранения противоположного направления от огня
-        bool isFireNearby = false; // Флаг для наличия огня поблизости
+        List<Vector3Int> plantMoves = new List<Vector3Int>(); // Тайлы с растениями
+        List<Vector3Int> normalMoves = new List<Vector3Int>(); // Обычные доступные тайлы
+        List<Vector3Int> jarMoves = new List<Vector3Int>();    // Тайлы с банками
 
-        // Проверяем все возможные направления
+        Vector3Int oppositeDirection = Vector3Int.zero;
+        bool isFireNearby = false;
+
         foreach (var direction in directions)
         {
             Vector3Int newPosition = currentGridPosition + direction;
 
-            // Если на соседней клетке есть огонь
             if (fireTilemap.HasTile(newPosition))
             {
-                // Устанавливаем противоположное направление
                 oppositeDirection = -direction;
                 isFireNearby = true;
             }
             else if (IsTileAvailable(newPosition, direction))
             {
-                if (IsJar(newPosition))
+                if (IsPlantTile(newPosition) && !visitedPlantTiles.Contains(newPosition))
                 {
-                    jarMoves.Add(newPosition); // Добавляем тайл с банкой в отдельный список
+                    plantMoves.Add(newPosition); // Добавляем новые растения
+                }
+                else if (IsJar(newPosition))
+                {
+                    jarMoves.Add(newPosition); // Добавляем банки
                 }
                 else
                 {
-                    normalMoves.Add(newPosition); // Добавляем обычный тайл
+                    normalMoves.Add(newPosition); // Добавляем обычные тайлы
                 }
             }
         }
 
-        if (normalMoves.Count <= 0 && jarMoves.Count <= 0)
-        {
-            ButterflyAway();
-        }
-
-        // Если огонь поблизости и противоположное направление доступно, двигаемся в противоположную сторону
+        // Если огонь рядом, бабочка должна уйти в противоположное направление
         if (isFireNearby)
         {
             Vector3Int oppositePosition = currentGridPosition + oppositeDirection;
-            
-            // Проверяем, доступно ли противоположное направление
             if (IsTileAvailable(oppositePosition, oppositeDirection) && !IsJar(oppositePosition))
             {
-                // Двигаемся в противоположную сторону от огня, если это не банка
                 MoveToNewPosition(oppositePosition);
-                return; // Завершаем метод, так как движение уже выполнено
+                return;
             }
         }
 
-        // Если нет огня поблизости или противоположное направление недоступно, выбираем обычные направления
+        // Если есть новые растения, бабочка идёт на новое растение
+        if (plantMoves.Count > 0)
+        {
+            Vector3Int moveDirection = GetNewestDirection(plantMoves);
+            MoveToNewPosition(moveDirection);
+            return;
+        }
+
+        // Если нет новых растений, двигаемся на обычные тайлы
         if (normalMoves.Count > 0)
         {
             Vector3Int moveDirection = GetRandomDirection(normalMoves);
             MoveToNewPosition(moveDirection);
+            return;
         }
-        // Если нет доступных обычных тайлов, выбираем тайл с банкой
-        else if (jarMoves.Count > 0)
+
+        // Если других вариантов нет, бабочка идёт на тайл с банкой
+        if (jarMoves.Count > 0)
         {
             Vector3Int moveDirection = GetRandomDirection(jarMoves);
             MoveToNewPosition(moveDirection);
         }
+        else
+        {
+            ButterflyAway();
+        }
     }
 
-    // Метод для перемещения бабочки на новую позицию
+    // Метод для получения самого нового растения
+    private Vector3Int GetNewestDirection(List<Vector3Int> plantMoves)
+    {
+        // Если необходимо, можете использовать логику, чтобы выбрать самое новое растение
+        return plantMoves[0]; // Вернуть первое найденное новое растение
+    }
+
+
+    // Метод для получения всех тайлов с растениями на groundTilemap
+    private List<Vector3Int> GetAllPlantTiles()
+    {
+        List<Vector3Int> plantTiles = new List<Vector3Int>();
+
+        BoundsInt bounds = groundTilemap.cellBounds;
+        for (int x = bounds.xMin; x <= bounds.xMax; x++)
+        {
+            for (int y = bounds.yMin; y <= bounds.yMax; y++)
+            {
+                Vector3Int tilePosition = new Vector3Int(x, y, 0);
+                if (IsPlantTile(tilePosition))
+                {
+                    plantTiles.Add(tilePosition);
+                }
+            }
+        }
+
+        return plantTiles;
+    }
+
+    // Метод для нахождения ближайшего растения
+    private Vector3Int GetClosestDirection(List<Vector3Int> plantMoves)
+    {
+        Vector3Int closestMove = plantMoves[0];
+        float closestDistance = Vector3.Distance(groundTilemap.GetCellCenterWorld(currentGridPosition), groundTilemap.GetCellCenterWorld(closestMove));
+
+        foreach (var move in plantMoves)
+        {
+            float distance = Vector3.Distance(groundTilemap.GetCellCenterWorld(currentGridPosition), groundTilemap.GetCellCenterWorld(move));
+            if (distance < closestDistance)
+            {
+                closestMove = move;
+                closestDistance = distance;
+            }
+        }
+
+        return closestMove;
+    }
+
     private void MoveToNewPosition(Vector3Int newPosition)
     {
         Vector3 previousPosition = groundTilemap.GetCellCenterWorld(currentGridPosition);
         currentGridPosition = newPosition;
-        lastDirection = newPosition - currentGridPosition; // Обновляем последнее направление
-    
+
+        // Если это тайл с растением, добавляем его в список посещённых
+        if (IsPlantTile(newPosition))
+        {
+            visitedPlantTiles.Add(newPosition);
+        }
+
+        lastDirection = newPosition - currentGridPosition; 
+        
         Vector3 directionToTarget = groundTilemap.GetCellCenterWorld(newPosition) - transform.position;
-    
-        // Угол поворота с поправкой на 90 градусов (если голова смотрит вверх)
         float angle = Mathf.Atan2(directionToTarget.y, directionToTarget.x) * Mathf.Rad2Deg - 90f;
 
         transform.DORotateQuaternion(Quaternion.Euler(0, 0, angle), 0.5f);
         transform.DOMove(groundTilemap.GetCellCenterWorld(currentGridPosition), 0.5f).OnComplete(ButterflyTurnEnd);
     }
 
+    private bool IsPlantTile(Vector3Int position)
+    {
+        TileBase tile = blockTilemap.GetTile(position);
+
+        if (tile != null)
+        {
+            return tile.name == "PlantTile"; // Замените на имя вашего тайла с растением
+        }
+
+        return false; // Тайл отсутствует или это не растение
+    }
 
     // Метод для проверки доступности тайла
     private bool IsTileAvailable(Vector3Int position, Vector3Int direction)
@@ -124,7 +198,7 @@ public class Butterfly : MonoBehaviour
             // Проверяем наличие деревьев (недоступный тайл)
             if (blockTilemap.HasTile(position))
             {
-                if (blockTilemap.GetTile(position).name == "StoneTile")
+                if (blockTilemap.GetTile(position).name == "PlantTile")
                     return true;
 
                 if (IsJar(position))
@@ -198,6 +272,7 @@ public class Butterfly : MonoBehaviour
         }
         else
         {
+            
             main.StartTurn();
         }
     }
@@ -244,7 +319,7 @@ public class Butterfly : MonoBehaviour
 
         // Рассчитываем расстояние до выбранной точки
         float distance = Vector3.Distance(transform.position, randomTarget);
-        float speed = 5f; // Скорость движения бабочки, которую можно регулировать
+        float speed = 6f; // Скорость движения бабочки, которую можно регулировать
         float animationDuration = distance / speed; // Время анимации исходя из скорости
 
         float scaleMultiplier = 3f; // Во сколько раз увеличить бабочку
